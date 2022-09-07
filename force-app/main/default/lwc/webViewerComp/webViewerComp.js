@@ -1,22 +1,14 @@
 import { LightningElement, track, wire } from "lwc";
 import { loadScript } from "lightning/platformResourceLoader";
-import libUrl from "@salesforce/resourceUrl/lib";
+import libUrl from "@salesforce/resourceUrl/V87lib";
 import myfilesUrl from "@salesforce/resourceUrl/myfiles";
 
 var url = myfilesUrl + "/webviewer-demo-annotated.pdf";
 
-var clientSidePdfGenerationConfig = {
-  cs_pdftron_lean: "/resource",
-  cs_pdftron_office: "/resource/office",
-  cs_pdftron_resource: "/resource/resource",
-  cs_pdftron_asm: "/resource/asm",
-  cs_pdftron_external: "/resource/external",
-  // cs_vlocity_webfonts_main: '/resource/webfonts',
-  cs_pdftron_officeasm: "/resource/officeAsm",
-  cs_pdftron_officeresource: "/resource/officeResource",
-
-  core_controls: libUrl + "/core/CoreControls.js",
-  url: url
+var webviewerConstructor = {
+  cs_pdftron_core: libUrl + "/core/webviewer-core.min.js",
+  pdfnet: myfilesUrl + "/PDFNet.js",
+  full_api: true
 };
 
 export default class WebViewerComp extends LightningElement {
@@ -68,8 +60,9 @@ export default class WebViewerComp extends LightningElement {
 
     this.uiInitialized = true;
 
+
     Promise.all([
-      // loadScript(this, libUrl + '/webviewer.min.js'),
+      loadScript(this, libUrl + '/webviewer.min.js')
     ])
       .then(() => {
         this.initUI();
@@ -81,11 +74,12 @@ export default class WebViewerComp extends LightningElement {
     const viewerElement = this.template.querySelector("div");
 
     var queryParameter = `#param=${JSON.stringify(
-      clientSidePdfGenerationConfig
+      webviewerConstructor
     )}`;
 
     var rcFrame = document.createElement("iframe");
     rcFrame.style = "position: absolute; width:0; height:0; border:0;";
+
 
     rcFrame.src = `${myfilesUrl}/noviewer.html${queryParameter}`;
     // rcFrame.frameBorder = 0;​
