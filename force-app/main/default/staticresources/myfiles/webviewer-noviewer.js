@@ -10,28 +10,19 @@ const getWindowHash = () => {
   
   var clientSidePdfGenerationConfig = JSON.parse(decodeURI(json))
   
-
-
   var script = document.createElement('script');
-  script.onload = function () {
+  script.onload = async function () {
     init();
+    var pdfnet = document.createElement('script');
+    pdfnet.src = clientSidePdfGenerationConfig['pdfnet'];
+    document.head.appendChild(pdfnet);
   };
   script.src = clientSidePdfGenerationConfig['cs_pdftron_core'];
   document.head.appendChild(script);
 
 
-  var pdfnet = document.createElement('script');
-  pdfnet.src = clientSidePdfGenerationConfig['pdfnet'];
-  document.head.appendChild(pdfnet);
-
-
-
   
-  
-  
-  
-  
-  async function init() {
+  function init() {
     console.log(`%c initialize Core `, 'background: red; color: white;');
     
 
@@ -73,10 +64,9 @@ const getWindowHash = () => {
         if (event.isTrusted && typeof event.data === 'object') {
           switch (event.data.type) {
             case 'OPEN_DOCUMENT':
-              event.target.readerControl.loadDocument(event.data.file)
+              Core.DocumentViewer.loadDocument(event.data.file)
               break;
             case 'REQUEST_PARAMS':
-              event.target.readerControl.loadDocument(event.data.file)
               break;
             default:
               break;
@@ -84,3 +74,8 @@ const getWindowHash = () => {
         }
       }
   }
+
+
+function applyWaterMark() {
+
+}
