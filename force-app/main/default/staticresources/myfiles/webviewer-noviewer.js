@@ -63,10 +63,8 @@ const getWindowHash = () => {
       function receiveMessage(event) {
         if (event.isTrusted && typeof event.data === 'object') {
           switch (event.data.type) {
-            case 'OPEN_DOCUMENT':
-              Core.DocumentViewer.loadDocument(event.data.file)
-              break;
-            case 'REQUEST_PARAMS':
+            case 'DOWNLOAD_DOCUMENT':
+              transportDocument(event.data.payload, false)
               break;
             default:
               break;
@@ -76,6 +74,85 @@ const getWindowHash = () => {
   }
 
 
-function applyWaterMark() {
-
-}
+  function transportDocument(payload, transport){
+    switch (payload.exportType) {
+      case 'jpg':
+      case 'png':
+        // PDF to Image (png, jpg)
+        pdfToImage(payload, transport);
+        break;
+      case 'pdf':
+        // DOC, Images to PDF
+        toPdf(payload, transport);
+        break;
+    }
+  }
+  
+  // Basic function that retrieves any viewable file from the viewer and downloads it as a pdf
+  async function toPdf (payload) {
+      let file = payload.file;
+  
+      parent.postMessage({ type: 'DOWNLOAD_DOCUMENT', file }, '*');
+      instance.downloadPdf({filename: payload.file});
+  
+  }
+  
+  
+  
+  const pdfToImage = async (payload, transport) => {
+  
+    await PDFNet.initialize();
+  
+    let doc = null;
+  
+    await PDFNet.runWithCleanup(async () => {
+  
+      const buffer = await payload.blob.arrayBuffer();
+      doc = await PDFNet.PDFDoc.createFromBuffer(buffer);
+      doc.initSecurityHandler();
+      doc.lock();
+  
+      const count = await doc.getPageCount();
+      const pdfdraw = await PDFNet.PDFDraw.create(92);
+      
+      let itr;
+      let currPage;
+      let bufferFile;
+  
+      // Handle multiple pages
+      for (let i = 1; i <= count; i++){
+  
+        itr = await doc.getPageIterator(i);
+        currPage = await itr.current();
+        bufferFile = await pdfdraw.exportStream(currPage, payload.exportType.toUpperCase());
+        transport ? saveFile(bufferFile, payload.file, "." + payload.exportType) : downloadFile(bufferFile, payload.file, "." + payload.exportType);
+  
+      }
+  
+    }); 
+  
+  }
+  
+  
+  
+  
+  // Master download method
+  const downloadFile = (buffer, fileName, fileExtension) => {
+    const blob = new Blob([buffer]);
+    const link = document.createElement('a');
+  
+    const file = fileName + fileExtension;
+    // create a blobURI pointing to our Blob
+    link.href = URL.createObjectURL(blob);
+    link.download = file
+    // some browser needs the anchor to be in the doc
+    document.body.append(link);
+    link.click();
+    link.remove();
+  
+  
+    parent.postMessage({ type: 'DOWNLOAD_DOCUMENT', file }, '*')
+    // in case the Blob uses a lot of memory
+    setTimeout(() => URL.revokeObjectURL(link.href), 7000);
+    
+  };
