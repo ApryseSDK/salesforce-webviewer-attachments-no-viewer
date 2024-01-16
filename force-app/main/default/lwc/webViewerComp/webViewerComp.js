@@ -1,7 +1,10 @@
 import { LightningElement, track, wire } from "lwc";
 import { loadScript } from "lightning/platformResourceLoader";
+import { CurrentPageReference } from 'lightning/navigation'
+import { fireEvent, registerListener, unregisterAllListeners } from 'c/pubsub'
 import libUrl from "@salesforce/resourceUrl/V87lib";
 import myfilesUrl from "@salesforce/resourceUrl/myfiles";
+import mimeTypes from './mimeTypes'
 
 var url = myfilesUrl + "/webviewer-demo-annotated.pdf";
 
@@ -11,13 +14,25 @@ var webviewerConstructor = {
   full_api: true
 };
 
+function _base64ToArrayBuffer(base64) {
+  var binary_string =  window.atob(base64);
+  var len = binary_string.length;
+  var bytes = new Uint8Array( len );
+  for (var i = 0; i < len; i++)        {
+      bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 export default class WebViewerComp extends LightningElement {
+  @wire(CurrentPageReference) pageRef
+  payload;
+
+
   connectedCallback() {
-    window.addEventListener(
-      "message",
-      this.handleReceiveMessage.bind(this),
-      false
-    );
+    registerListener('blobSelected', this.handleBlobSelected, this);
+    registerListener('transport_document', this.handleConvertSelected, this);
+    window.addEventListener("message", this.handleReceiveMessage.bind(this));
   }
 
   disconnectedCallback() {
@@ -27,21 +42,10 @@ export default class WebViewerComp extends LightningElement {
   handleReceiveMessage(event) {
     if (event.isTrusted && typeof event.data === "object") {
       switch (event.data.type) {
-        case "MESSAGE_FOR_LWC_COMPONENT":
-          console.log(
-            `%c LWC Parent received message payload: ${event.data.payload}`,
-            "background: red; color: white;"
-          );
-          break;
-        case "REQUEST_PARAMS":
-          console.log(`%c REQUEST_PARAMS `, "background: green; color: white;");
-          this.iframeWindow.postMessage(
-            {
-              type: "LOAD_CORE_CONTROLS",
-              params: clientSidePdfGenerationConfig
-            },
-            "*"
-          );
+        case 'DOWNLOAD_DOCUMENT':
+          const body = event.data.file + ' Downloaded';
+          fireEvent(this.pageRef, 'finishConvert', '');
+          this.showNotification('Success', body, 'success');
           break;
         default:
           break;
@@ -49,8 +53,41 @@ export default class WebViewerComp extends LightningElement {
     }
   }
 
-  handleFileSelected(file) {
-    this.iframeWindow.postMessage({ type: "OPEN_DOCUMENT", file: file }, "*");
+  handleBlobSelected(record) {
+    const blobby = new Blob([_base64ToArrayBuffer(record.body)], {
+      type: mimeTypes[record.FileExtension]
+    });
+
+    const payload = {
+      blob: blobby,
+      extension: record.cv.FileExtension,
+      file: record.cv.Title,
+      filename: record.cv.Title + "." + record.cv.FileExtension,
+      documentId: record.cv.Id
+    };
+
+    this.payload = {...payload};
+    console.log(this.payload);
+    
+  }
+
+  handleConvertSelected(convert) {
+    if(this.payload != null){
+      const payload = {...this.payload};
+      payload.exportType = convert.value;
+      payload.transport = convert.transport;
+
+
+      if(convert.conform){
+        payload.conformType = convert.conform;
+        this.iframeWindow.postMessage({type: convert.transport, payload }, '*');
+      } else {
+        this.iframeWindow.postMessage({type: convert.transport, payload }, '*');
+      }
+      
+    } else {
+      console.log('No file selected');
+    }
   }
 
   renderedCallback() {
@@ -82,13 +119,7 @@ export default class WebViewerComp extends LightningElement {
 
 
     rcFrame.src = `${myfilesUrl}/noviewer.html${queryParameter}`;
-    // rcFrame.frameBorder = 0;​
     viewerElement.appendChild(rcFrame);
-    // console.log(rcFrame.contentWindow)
     this.iframeWindow = rcFrame.contentWindow;
-    // viewerElement.addEventListener('message', function(event) {
-    //   this.iframeWindow = viewerElement.querySelector('iframe').contentWindow;
-    //   console.log(`%c  viewerElement.addEventListener message`, 'background: red; color: white;', event);
-    // });
   }
 }
