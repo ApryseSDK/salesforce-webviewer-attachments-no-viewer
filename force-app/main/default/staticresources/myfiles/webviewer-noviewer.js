@@ -4,7 +4,7 @@ const getWindowHash = () => {
     return (i >= 0 ? url.substring(i + 1) : '');
 };
   
-  var resourceURL = '/resource/V87';
+  var resourceURL = '/resource/';
   var params = getWindowHash(); // parse url parameters
   var json = params.split('=')[1];
   
@@ -37,17 +37,16 @@ const getWindowHash = () => {
     window.Core.setPDFResourcePath(resourceURL + 'resource');
     if (clientSidePdfGenerationConfig['full_api']) {
       window.Core.setPDFWorkerPath(resourceURL + 'pdf_full');
-      window.Core.setPDFAsmPath(resourceURL + 'asm_full');
     } else {
       window.Core.setPDFWorkerPath(resourceURL + 'pdf_lean');
-      window.Core.setPDFAsmPath(resourceURL + 'asm_lean');
     }
 
     // external 3rd party libraries
     window.Core.setExternalPath(resourceURL + 'external');
     window.Core.disableEmbeddedJavaScript(true)
 
-    window.Core.disableOptimizedWorkers();
+    window.Core.enableOptimizedWorkers();
+
   
       
   
