@@ -2,7 +2,7 @@ import { LightningElement, track, wire } from "lwc";
 import { loadScript } from "lightning/platformResourceLoader";
 import { CurrentPageReference } from 'lightning/navigation'
 import { fireEvent, registerListener, unregisterAllListeners } from 'c/pubsub'
-import libUrl from "@salesforce/resourceUrl/V87lib";
+import libUrl from "@salesforce/resourceUrl/lib";
 import myfilesUrl from "@salesforce/resourceUrl/myfiles";
 import mimeTypes from './mimeTypes'
 
