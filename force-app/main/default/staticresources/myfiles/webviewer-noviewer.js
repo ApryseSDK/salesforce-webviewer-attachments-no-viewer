@@ -28,6 +28,7 @@ const getWindowHash = () => {
 
     window.Core.forceBackendType('ems');
 
+    window.Core.setWorkerPath(resourceURL + 'lib/core');
 
     window.Core.setOfficeAsmPath(resourceURL + 'office_asm');
     window.Core.setOfficeWorkerPath(resourceURL + 'office');
@@ -90,15 +91,17 @@ const getWindowHash = () => {
   // Basic function that retrieves any viewable file from the viewer and downloads it as a pdf
   async function toPdf (payload) {
       let file = payload.file;
-  
+      let buffer = await payload.blob.arrayBuffer();
+      let resultBlob = await Core.officeToPDFBuffer(buffer, {
+        extension: 'docx'
+      })
       parent.postMessage({ type: 'DOWNLOAD_DOCUMENT', file }, '*');
-      instance.downloadPdf({filename: payload.file});
-  
+      downloadFile(resultBlob, file, '.pdf');
   }
   
   
-  
   const pdfToImage = async (payload, transport) => {
+    const { PDFNet } = Core;
   
     await PDFNet.initialize();
   
